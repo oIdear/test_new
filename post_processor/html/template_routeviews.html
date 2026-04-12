@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BGP异常检测报告</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .anomaly-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .collapsible {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 16px;
+            transition: 0.4s;
+        }
+        .active, .collapsible:hover {
+            background-color: #45a049;
+        }
+        .content {
+            padding: 0 18px;
+            display: none;
+            background-color: white;
+            overflow: hidden;
+            border-top: 1px solid #ddd;
+        }
+        .anomaly-details {
+            padding: 20px;
+        }
+        .anomaly-info {
+            margin-bottom: 15px;
+        }
+        .anomaly-info strong {
+            display: inline-block;
+            width: 120px;
+        }
+        .ai-analysis-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.3s;
+        }
+        .ai-analysis-btn:hover {
+            background-color: #0b7dda;
+        }
+        .ai-analysis-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .ai-result {
+            margin: 10px 0;
+            padding: 15px;
+            background-color: #e8f5e8;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .ai-result code {
+            font-size: 1em;
+            font-family: Consolas, monospace;
+            background: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        /* 知识问答窗口样式 */
+        .qa-window {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 650px;
+            height: 700px;
+            max-height: 80vh;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .qa-header {
+            background-color: #2196F3;
+            color: white;
+            padding: 12px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .qa-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        .qa-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .qa-body {
+            padding: 15px;
+            overflow-y: auto;
+            max-height: 600px;
+            flex: 1;
+        }
+        .qa-message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        .qa-message.user {
+            background-color: #e3f2fd;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .qa-message.bot {
+            background-color: #f1f1f1;
+            align-self: flex-start;
+        }
+        .qa-input-area {
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+        }
+        .qa-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .qa-submit {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .qa-submit:hover {
+            background-color: #0b7dda;
+        }
+        /* 图表样式 */
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            margin: 20px 0;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>REPLACE_WITH_TITLE</h1>
+    
+    <!-- 知识问答窗口 -->
+    <div class="qa-window">
+        <div class="qa-header">
+            <h3>BGP知识问答</h3>
+            <button class="qa-toggle" onclick="toggleQAWindow()">−</button>
+        </div>
+        <div class="qa-body" id="qaBody">
+            <div class="qa-message bot">
+                您好！我是BGP异常溯源分析助手，有什么问题可以问我。
+            </div>
+        </div>
+        <div class="qa-input-area">
+            <input type="text" class="qa-input" id="qaInput" placeholder="输入您的问题...">
+            <button class="qa-submit" onclick="submitQuestion()">发送</button>
+        </div>
+    </div>
+
+    <div class="explanation">
+        REPLACE_WITH_EXPLANATION
+    </div>
+
+    <!-- 图表容器 -->
+    <div class="chart-container">
+        <canvas id="anomalyChart"></canvas>
+    </div>
+
+    <div class="anomaly-sections">
+        REPLACE_WITH_SECTIONS
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        
+        // 折叠面板功能
+        var coll = document.getElementsByClassName("collapsible");
+        for (var i = 0; i < coll.length; i++) {
+            coll[i].addEventListener("click", function() {
+                this.classList.toggle("active");
+                var content = this.nextElementSibling;
+                if (content.style.display === "block") {
+                    content.style.display = "none";
+                } else {
+                    content.style.display = "block";
+                }
+            });
+        }
+
+        // 初始化图表
+        function initChart() {
+            var ctx = document.getElementById('anomalyChart').getContext('2d');
+            var chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: REPLACE_WITH_XVALUES,
+                    datasets: [
+                        {
+                            label: 'Anomalous Patterns',
+                            data: REPLACE_WITH_YVALUES_A,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Unknown Patterns',
+                            data: REPLACE_WITH_YVALUES_B,
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Alarms'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Day of Month'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 知识问答窗口功能
+        function toggleQAWindow() {
+            const qaWindow = document.querySelector(".qa-window");
+            const qaBody = document.getElementById("qaBody");
+            const toggleBtn = document.querySelector(".qa-toggle");
+            const inputArea = document.querySelector(".qa-input-area");
+
+            if (qaBody.style.display === "none") {
+                qaBody.style.display = "block";
+                inputArea.style.display = "flex";
+                qaWindow.style.height = "700px";   // 展开高度
+                toggleBtn.textContent = "−";
+            } else {
+                qaBody.style.display = "none";
+                inputArea.style.display = "none";
+                qaWindow.style.height = "50px";    // 只剩标题栏
+                toggleBtn.textContent = "+";
+            }
+        }
+
+        function submitQuestion() {
+            var question = document.getElementById("qaInput").value;
+            if (!question.trim()) return;
+
+            var qaBody = document.getElementById("qaBody");
+            var qaInput = document.getElementById("qaInput");
+
+            // 添加用户问题到聊天窗口
+            qaBody.innerHTML += '<div class="qa-message user">' + question + '</div>';
+            qaBody.scrollTop = qaBody.scrollHeight;
+
+            // 清空输入框
+            qaInput.value = '';
+
+            // 显示加载状态
+            qaBody.innerHTML += '<div class="qa-message bot" id="loadingMessage">正在思考...请稍候</div>';
+            qaBody.scrollTop = qaBody.scrollHeight;
+
+            // 调用API获取答案
+            fetch('http://127.0.0.1:5000/api/qa', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question: question })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 移除加载状态
+                document.getElementById('loadingMessage').remove();
+
+                // 添加AI回答到聊天窗口
+                const answer = data.success ? data.answer : '抱歉，无法获取答案，请稍后重试。';
+                qaBody.innerHTML += '<div class="qa-message bot">' + marked.parse(answer) + '</div>';
+                qaBody.scrollTop = qaBody.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loadingMessage').remove();
+                qaBody.innerHTML += '<div class="qa-message bot">API调用失败，请稍后重试。</div>';
+                qaBody.scrollTop = qaBody.scrollHeight;
+            });
+        }
+
+        // 按Enter键提交问题
+        document.getElementById("qaInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                submitQuestion();
+            }
+        });
+
+        // 分析异常
+        function analyzeAnomaly(anomalyId) {
+            const button = document.getElementById('analyzeBtn-' + anomalyId);
+            const resultDiv = document.getElementById('analysisResult-' + anomalyId);
+
+            // 禁用按钮并显示加载状态
+            button.disabled = true;
+            button.textContent = '分析中...';
+            resultDiv.innerHTML = '<div style="color: #666;">正在分析异常...</div>';
+
+            // 调用API分析异常
+            fetch('http://127.0.0.1:5000/api/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ group_id: anomalyId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 恢复按钮状态
+                button.disabled = false;
+                button.textContent = 'AI分析';
+
+                // 显示分析结果
+                if (data.success) {
+                    resultDiv.innerHTML ='<div class="ai-result">' + marked.parse(data.analysis) + '</div>';
+                } else {
+                    resultDiv.innerHTML = '<div style="color: #ff0000;">分析失败，请稍后重试。</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                button.disabled = false;
+                button.textContent = 'AI分析';
+                resultDiv.innerHTML = '<div style="color: #ff0000;">API调用失败，请稍后重试。</div>';
+            });
+        }
+
+        // 页面加载完成后执行
+        window.onload = function() {
+            // 初始化图表
+            initChart();
+
+            // 为每个异常块添加AI分析按钮
+            const collapsibles = document.getElementsByClassName('collapsible');
+            for (let i = 0; i < collapsibles.length; i++) {
+                const collapsible = collapsibles[i];
+                const content = collapsible.nextElementSibling;
+
+                // 提取异常ID
+                const idMatch = collapsible.textContent.match(/id: (\d+)/);
+                if (idMatch) {
+                    const anomalyId = idMatch[1];
+
+                    // 提取时间信息
+                    const timeMatch = collapsible.textContent.match(/start: ([\d\/\s:]+), end: ([\d\/\s:]+)/);
+                    const timeInfo = timeMatch ? timeMatch[1] + ' - ' + timeMatch[2] : '未知';
+
+                    // 创建异常数据对象
+                    const anomalyData = {
+                        time: timeInfo,
+                        type: 'anomaly',
+                        prefix: '未知',
+                        path: '未知',
+                        pattern: 'anomaly'
+                    };
+
+                    // 创建AI分析按钮和结果容器
+                    const aiContainer = document.createElement('div');
+                    aiContainer.style.margin = '10px 0';
+
+                    const aiButton = document.createElement('button');
+                    aiButton.className = 'ai-analysis-btn';
+                    aiButton.id = 'analyzeBtn-' + anomalyId;
+                    aiButton.onclick = function() {
+                        analyzeAnomaly(anomalyId);
+                    };
+                    aiButton.textContent = 'AI分析';
+
+                    const aiResult = document.createElement('div');
+                    aiResult.id = 'analysisResult-' + anomalyId;
+                    aiResult.style.marginTop = '10px';
+
+                    aiContainer.appendChild(aiButton);
+                    aiContainer.appendChild(aiResult);
+
+                    // 将AI容器添加到内容块的开头
+                    content.insertBefore(aiContainer, content.firstChild);
+                }
+            }
+        };
+    </script>
+</body>
+</html>
