@@ -83,20 +83,42 @@ class EmbeddingStore:
             return []
 
 if __name__ == '__main__':
+    import sys
+    from pathlib import Path
+    
+    # 使用相对路径，基于项目根目录
+    base_dir = Path(__file__).resolve().parent
+    
+    print("=" * 60)
+    print("🚀 开始构建RAG向量索引")
+    print("=" * 60)
+    
+    # 初始化EmbeddingStore
     store = EmbeddingStore()
-
-    data_path = '/home/zzx-king/zzx/routing-anomaly-detection-master/rag_system/parsed_data.json'
-    store.build_index(data_path)
-
-    index_path = '/home/zzx-king/zzx/routing-anomaly-detection-master/rag_system/faiss_index.bin'
-    save_data_path = '/home/zzx-king/zzx/routing-anomaly-detection-master/rag_system/index_data.json'
-    store.save_index(index_path, save_data_path)
-
-    test_query = 'BGP route leak'
-    results = store.search(test_query, k=3)
-    print('Search results for', test_query, ':')
-    for i, (result, distance) in enumerate(results):
-        print('Result', i+1, '(distance:', distance, '):')
-        print('File:', result['file'])
-        print('Content:', result['content'][:200], '...')
-        print()
+    
+    # 构建索引
+    data_path = base_dir / 'parsed_data.json'
+    if not data_path.exists():
+        print(f'❌ 错误: 找不到数据文件 {data_path}')
+        print('💡 请先运行 data_parser.py 生成 parsed_data.json')
+        sys.exit(1)
+    
+    print(f'\n📂 加载数据文件: {data_path}')
+    store.build_index(str(data_path))
+    
+    # 保存索引
+    index_path = base_dir / 'faiss_index.bin'
+    save_data_path = base_dir / 'index_data.json'
+    
+    print(f'\n💾 保存索引文件...')
+    store.save_index(str(index_path), str(save_data_path))
+    
+   
+    print(f'\n{"=" * 60}')
+    print('✅ 向量索引构建完成！')
+    print(f'📊 索引统计:')
+    print(f'   - 文档数量: {len(store.data)}')
+    print(f'   - 向量维度: {store.dimension}')
+    print(f'   - 索引文件: {index_path}')
+    print(f'   - 数据文件: {save_data_path}')
+    print("=" * 60)
