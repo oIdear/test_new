@@ -62,6 +62,25 @@ def semantic_text_splitter(text, chunk_size=1000, chunk_overlap=150):
     # 过滤空字符串
     return [chunk for chunk in chunks if chunk.strip()]
 
+# 解析TXT文件（RFC纯文本格式）
+def parse_txt(file_path):
+    data = []
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            text = f.read()
+        chunks = semantic_text_splitter(text, chunk_size=1000, chunk_overlap=150)
+        for i, chunk in enumerate(chunks):
+            if chunk.strip():
+                data.append({
+                    'type': 'txt',
+                    'file': os.path.basename(file_path),
+                    'chunk_index': i,
+                    'content': chunk.strip()
+                })
+    except Exception as e:
+        print(f'Error parsing {file_path}: {e}')
+    return data
+
 # 解析PDF文件（使用LangChain语义分割）
 def parse_pdf(file_path):
     data = []
@@ -115,6 +134,9 @@ def main():
         elif file.endswith('.pdf'):
             print(f'📕 解析PDF文件: {file}')
             all_data.extend(parse_pdf(file_path))
+        elif file.endswith('.txt'):
+            print(f'📄 解析TXT文件: {file}')
+            all_data.extend(parse_txt(file_path))
     
     print(f'\n✅ 解析完成！共生成 {len(all_data)} 个文本块')
     

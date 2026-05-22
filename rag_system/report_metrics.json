@@ -1,0 +1,52 @@
+[
+  {
+    "group_id": 0,
+    "elapsed": 16.810071229934692,
+    "citations": 0
+  },
+  {
+    "group_id": 1,
+    "elapsed": 21.043415546417236,
+    "citations": 2
+  },
+  {
+    "group_id": 2,
+    "elapsed": 20.683440685272217,
+    "citations": 3
+  },
+  {
+    "group_id": 3,
+    "elapsed": 21.008991956710815,
+    "citations": 2
+  },
+  {
+    "group_id": 4,
+    "elapsed": 20.98514175415039,
+    "citations": 4
+  },
+  {
+    "group_id": 5,
+    "elapsed": 21.994766235351562,
+    "citations": 2
+  },
+  {
+    "group_id": 6,
+    "elapsed": 21.525086879730225,
+    "citations": 3
+  },
+  {
+    "group_id": 7,
+    "elapsed": 18.804665088653564,
+    "citations": 3
+  },
+  {
+    "group_id": 8,
+    "elapsed": 21.12449622154236,
+    "citations": 0
+  },
+  {
+    "group_id": 9,
+    "elapsed": 21.757509469985962,
+    "citations": 4
+  }
+]

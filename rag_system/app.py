@@ -120,138 +120,69 @@ def call_deepseek_api(prompt, context):
         print(f"调用DeepSeek API时出错: {e}")
         return "API调用失败，请稍后重试。"
 
-def rag_search_context(alarm, k=3):
+# pattern 代码 → 语义描述映射，用于生成纯语义查询词（去除数值噪声）
+_PATTERN_DESCRIPTIONS = {
+    "a1": "origin AS validation RPKI ROA route origin authorization IRR prefix legitimacy",
+    "a2": "valley-free violation route leak provider customer peer AS relationship BGP policy",
+    "a3": "reserved ASN unknown autonomous system bogon path anomaly invalid AS number",
+    "a4": "same organization origin AS change internal routing sibling AS",
+    "b1": "origin connectivity RPKI validation upstream provider customer link",
+    "b2": "AS path prepending traffic engineering load balancing",
+    "b3": "different upstream provider path change origin upstream diversity",
+}
+
+
+def _build_rag_query(alarm):
     """
-    基于告警的多维度特征构建RAG查询词
-    充分利用 alarms_wide_202408.jsonl 中的丰富信息
+    从告警中提取语义信号构建查询词。
+    策略：用 pattern 语义描述替代原始数值字段，保留 RPKI 状态等有语义的字符串。
+    查询词控制在 500 字符内，简洁比冗长更有效。
     """
-    
-    query_parts = []
-    
-    # 1. 基础异常标识
-    query_parts.append("BGP routing anomaly detection")
-    
-    # 2. 时间窗口信息
-    if alarm.get("start_time"):
-        query_parts.append(f"time window: {alarm['start_time']} to {alarm.get('end_time', 'unknown')}")
-    
-    # 3. 受影响的前缀
-    for event in alarm.get("events", []):
-        prefixes = event.get("prefix", [])
-        if prefixes:
-            query_parts.append(f"affected prefix: {prefixes[0]}")
-    
-    # 4. 路由变更关键信息
+    parts = ["BGP routing anomaly"]
+
+    # 收集出现过的 pattern 类型（去重）
+    seen_patterns = set()
     for event in alarm.get("events", []):
         for rc in event.get("route_changes", []):
-            # 路径信息
-            path1 = rc.get("path1", "")
-            path2 = rc.get("path2", "")
-            if path1:
-                query_parts.append(f"path before: {path1}")
-            if path2:
-                query_parts.append(f"path after: {path2}")
-            
-            # BEAM差异分数
-            diff = rc.get("diff")
-            if diff is not None and diff != float('inf'):
-                query_parts.append(f"beam_diff_score: {diff:.4f}")
-            elif diff == float('inf'):
-                query_parts.append("beam_diff_score: infinity (extreme anomaly)")
-            
-            # 责任AS (culprit)
-            culprit_list = rc.get("culprit", [])
-            if culprit_list:
-                culprit_asns = []
-                for group in culprit_list:
-                    if isinstance(group, list):
-                        culprit_asns.extend(group)
-                if culprit_asns:
-                    query_parts.append(f"suspect AS: {', '.join(culprit_asns)}")
-            
-            # 5. Patterns 中的关键诊断信息
-            patterns = rc.get("patterns", {})
-            
-            # a1: Origin 验证相关 (RPKI, IRR, WHOIS)
-            if "a1" in patterns:
-                a1 = patterns["a1"]
-                rpki_1 = a1.get("origin_rpki_1", "")
-                rpki_2 = a1.get("origin_rpki_2", "")
-                irr_1 = a1.get("origin_irr_1", "")
-                irr_2 = a1.get("origin_irr_2", "")
-                
-                if rpki_1 or rpki_2:
-                    query_parts.append(f"rpki_status: {rpki_1} -> {rpki_2}")
-                if irr_1 or irr_2:
-                    query_parts.append(f"irr_status: {irr_1} -> {irr_2}")
-                
-                whois_1 = a1.get("origin_whois_1", "")
-                whois_2 = a1.get("origin_whois_2", "")
-                if whois_1 or whois_2:
-                    query_parts.append(f"whois_validation: {whois_1} -> {whois_2}")
-            
-            # a2: Valley-free 违规
-            if "a2" in patterns:
-                a2 = patterns["a2"]
-                vf_keys = [k for k in a2.keys() if "non_valley_free" in k]
-                if vf_keys:
-                    query_parts.append("valley_free_violation detected")
-            
-            # a3: 路径异常 (reserved ASN, unknown ASN, no relationship)
-            if "a3" in patterns:
-                a3 = patterns["a3"]
-                if "reserved_path_1" in a3 or "reserved_path_2" in a3:
-                    query_parts.append("reserved_asn_in_path")
-                if "unknown_asn_1" in a3 or "unknown_asn_2" in a3:
-                    unknown_asns = [a3.get(k) for k in ["unknown_asn_1", "unknown_asn_2"] if k in a3]
-                    query_parts.append(f"unknown_asn: {', '.join(filter(None, unknown_asns))}")
-                if "none_rel_1" in a3 or "none_rel_2" in a3:
-                    query_parts.append("no_business_relationship_in_path")
-            
-            # a4: 同源组织
-            if "a4" in patterns:
-                a4 = patterns["a4"]
-                same_org = a4.get("origin_same_org", "")
-                if same_org:
-                    query_parts.append(f"same_organization: {same_org}")
-            
-            # b1: Origin 连接性和验证
-            if "b1" in patterns:
-                b1 = patterns["b1"]
-                origin_conn = b1.get("origin_connection", "")
-                if origin_conn:
-                    query_parts.append(f"origin_connection_type: {origin_conn}")
-            
-            # b2: AS Prepend
-            if "b2" in patterns:
-                b2 = patterns["b2"]
-                prepend_keys = [k for k in b2.keys() if "as_prepend" in k]
-                if prepend_keys:
-                    query_parts.append("as_path_prepending detected")
-            
-            # b3: 不同上游
-            if "b3" in patterns:
-                b3 = patterns["b3"]
-                diff_upstream = b3.get("origin_different_upstream", "")
-                if diff_upstream:
-                    query_parts.append(f"different_upstream_as: {diff_upstream}")
-    
-    # 6. 添加专业术语和分类关键词
-    query_parts.append("route leak hijack misconfiguration RPKI IRR ROA valley-free BGP security")
-    
-    # 组合查询词，限制长度
-    query = " ".join(query_parts)[:2000]  # 适当增加长度以容纳更多信息
-    
-    print("RAG查询词:", query)
-    print(f"查询词长度: {len(query)} 字符")
-    print(f"查询词组成部分数: {len(query_parts)}")
+            for pat_key in rc.get("patterns", {}).keys():
+                seen_patterns.add(pat_key)
 
-    results = store.search(query, k=k)
+    # 将 pattern 代码转为语义描述
+    for pat_key in sorted(seen_patterns):
+        if pat_key in _PATTERN_DESCRIPTIONS:
+            parts.append(_PATTERN_DESCRIPTIONS[pat_key])
+
+    # RPKI/IRR 状态是有语义的字符串，保留
+    for event in alarm.get("events", []):
+        for rc in event.get("route_changes", []):
+            a1 = rc.get("patterns", {}).get("a1", {})
+            for field in ["origin_rpki_1", "origin_rpki_2", "origin_irr_1", "origin_irr_2"]:
+                val = a1.get(field, "")
+                if val:
+                    parts.append(f"RPKI status {val}")
+                    break  # 每条 rc 只追加一次，避免重复
+
+    # BEAM 极端异常单独标注语义
+    for event in alarm.get("events", []):
+        for rc in event.get("route_changes", []):
+            if rc.get("diff") == float("inf"):
+                parts.append("extreme path anomaly unseen AS relationship")
+                break
+
+    query = " ".join(parts)[:500]
+    print(f"RAG查询词({len(query)}字符): {query[:120]}...")
+    return query
+
+
+def rag_search_context(alarm, k=3):
+    query = _build_rag_query(alarm)
+    # hybrid=True 启用 BM25+向量+RRF+MMR 全流程
+    results = store.search(query, k=k, hybrid=True)
 
     context_blocks = []
     for item, dist in results:
         context_blocks.append(
-            f"[来源:{item.get('file','unknown')} | 相似度:{dist:.3f}]\n"
+            f"[来源:{item.get('file','unknown')} | 相关度:{dist:.4f}]\n"
             f"{item['content'][:800]}"
         )
 
@@ -283,6 +214,7 @@ def analyze_anomaly():
     一类是【检索增强上下文】（来自RFC文档、研究论文和运维知识库的相关资料）
 
     请基于检索证据进行约束推理（Evidence-grounded reasoning），禁止脱离证据臆测结论。
+    每引用一条检索资料作为判据，必须在句末附注来源，格式严格为：[来源:文件名 | 相似度:X.XXX]
     分析目标是：对异常进行溯源解释与归因判断。
 
     ====================
@@ -360,9 +292,9 @@ def knowledge_qa():
     # 步骤 1: 将中文查询翻译为英文（用于检索英文向量库）
     translated_query = translate_query_to_en(question)
     
-    # 步骤 2: 使用翻译后的英文查询进行向量检索
+    # 步骤 2: 使用翻译后的英文查询进行混合检索
     print(f"使用英文查询词检索: {translated_query[:150]}")
-    rag_results = store.search(translated_query, k=3)
+    rag_results = store.search(translated_query, k=3, hybrid=True)
     
     # 步骤 3: 构建检索上下文
     context_blocks = []

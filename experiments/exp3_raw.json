@@ -1,0 +1,366 @@
+[
+  {
+    "gid": 0,
+    "dp": "a2",
+    "kws": [
+      "valley",
+      "route leak",
+      "provider",
+      "customer"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 2
+  },
+  {
+    "gid": 1,
+    "dp": "a2",
+    "kws": [
+      "valley",
+      "route leak",
+      "provider",
+      "customer"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 2
+  },
+  {
+    "gid": 2,
+    "dp": "a2",
+    "kws": [
+      "valley",
+      "route leak",
+      "provider",
+      "customer"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 3
+  },
+  {
+    "gid": 4,
+    "dp": "a2",
+    "kws": [
+      "valley",
+      "route leak",
+      "provider",
+      "customer"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 2
+  },
+  {
+    "gid": 5,
+    "dp": "a2",
+    "kws": [
+      "valley",
+      "route leak",
+      "provider",
+      "customer"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 3
+  },
+  {
+    "gid": 6,
+    "dp": "a2",
+    "kws": [
+      "valley",
+      "route leak",
+      "provider",
+      "customer"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 2
+  },
+  {
+    "gid": 7,
+    "dp": "a2",
+    "kws": [
+      "valley",
+      "route leak",
+      "provider",
+      "customer"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 2
+  },
+  {
+    "gid": 3,
+    "dp": "a1",
+    "kws": [
+      "RPKI",
+      "ROA",
+      "IRR",
+      "origin",
+      "validation"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 2,
+    "C3_hit": true,
+    "C3_div": 2
+  },
+  {
+    "gid": 9,
+    "dp": "a1",
+    "kws": [
+      "RPKI",
+      "ROA",
+      "IRR",
+      "origin",
+      "validation"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 3
+  },
+  {
+    "gid": 16,
+    "dp": "a1",
+    "kws": [
+      "RPKI",
+      "ROA",
+      "IRR",
+      "origin",
+      "validation"
+    ],
+    "C0_hit": true,
+    "C0_div": 2,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 3
+  },
+  {
+    "gid": 19,
+    "dp": "a1",
+    "kws": [
+      "RPKI",
+      "ROA",
+      "IRR",
+      "origin",
+      "validation"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 2,
+    "C3_hit": true,
+    "C3_div": 3
+  },
+  {
+    "gid": 21,
+    "dp": "a1",
+    "kws": [
+      "RPKI",
+      "ROA",
+      "IRR",
+      "origin",
+      "validation"
+    ],
+    "C0_hit": true,
+    "C0_div": 2,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 2,
+    "C3_hit": true,
+    "C3_div": 3
+  },
+  {
+    "gid": 25,
+    "dp": "a1",
+    "kws": [
+      "RPKI",
+      "ROA",
+      "IRR",
+      "origin",
+      "validation"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 2,
+    "C3_hit": true,
+    "C3_div": 3
+  },
+  {
+    "gid": 14,
+    "dp": "a3",
+    "kws": [
+      "reserved",
+      "AS_PATH",
+      "AS number",
+      "autonomous system"
+    ],
+    "C0_hit": false,
+    "C0_div": 1,
+    "C1_hit": false,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 1
+  },
+  {
+    "gid": 24,
+    "dp": "a3",
+    "kws": [
+      "reserved",
+      "AS_PATH",
+      "AS number",
+      "autonomous system"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": false,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": false,
+    "C3_div": 1
+  },
+  {
+    "gid": 35,
+    "dp": "a3",
+    "kws": [
+      "reserved",
+      "AS_PATH",
+      "AS number",
+      "autonomous system"
+    ],
+    "C0_hit": false,
+    "C0_div": 1,
+    "C1_hit": false,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 2
+  },
+  {
+    "gid": 38,
+    "dp": "a3",
+    "kws": [
+      "reserved",
+      "AS_PATH",
+      "AS number",
+      "autonomous system"
+    ],
+    "C0_hit": false,
+    "C0_div": 1,
+    "C1_hit": false,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 1
+  },
+  {
+    "gid": 45,
+    "dp": "a3",
+    "kws": [
+      "reserved",
+      "AS_PATH",
+      "AS number",
+      "autonomous system"
+    ],
+    "C0_hit": false,
+    "C0_div": 1,
+    "C1_hit": false,
+    "C1_div": 1,
+    "C2_hit": false,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 1
+  },
+  {
+    "gid": 36,
+    "dp": "a4",
+    "kws": [
+      "origin",
+      "autonomous system",
+      "organization"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": false,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 2
+  },
+  {
+    "gid": 153,
+    "dp": "a4",
+    "kws": [
+      "origin",
+      "autonomous system",
+      "organization"
+    ],
+    "C0_hit": true,
+    "C0_div": 1,
+    "C1_hit": true,
+    "C1_div": 1,
+    "C2_hit": true,
+    "C2_div": 1,
+    "C3_hit": true,
+    "C3_div": 2
+  }
+]
