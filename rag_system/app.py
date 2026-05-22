@@ -3,6 +3,7 @@ import requests
 from pathlib import Path
 import json
 from embedding_store import EmbeddingStore
+from historical_lookup import search_historical_cases
 
 app = Flask(__name__)
 
@@ -185,6 +186,11 @@ def rag_search_context(alarm, k=3):
             f"[来源:{item.get('file','unknown')} | 相关度:{dist:.4f}]\n"
             f"{item['content'][:800]}"
         )
+
+    # 历史异常案例精确匹配（按 ASN / 前缀查找私有案例库）
+    hist_context = search_historical_cases(alarm, max_per_type=2)
+    if hist_context:
+        context_blocks.append("【历史异常案例匹配】\n" + hist_context)
 
     return "\n\n".join(context_blocks)
 # 分析异常接口

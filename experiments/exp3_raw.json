@@ -1,366 +1,192 @@
 [
   {
     "gid": 0,
-    "dp": "a2",
-    "kws": [
-      "valley",
-      "route leak",
-      "provider",
-      "customer"
+    "pattern": "a2",
+    "rag_files": [
+      "rfc9234.txt",
+      "2402.16025v1.pdf",
+      "rfc9234.txt"
     ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 2
-  },
-  {
-    "gid": 1,
-    "dp": "a2",
-    "kws": [
-      "valley",
-      "route leak",
-      "provider",
-      "customer"
-    ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 2
+    "rag_source_cites": 0,
+    "rag_rfc_count": 1,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 7,
+    "rag_time": 60.12,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 0,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 8,
+    "norag_time": 63.59
   },
   {
     "gid": 2,
-    "dp": "a2",
-    "kws": [
-      "valley",
-      "route leak",
-      "provider",
-      "customer"
+    "pattern": "a2",
+    "rag_files": [
+      "rfc9234.txt",
+      "2402.16025v1.pdf",
+      "rfc7908.txt.pdf"
     ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 3
-  },
-  {
-    "gid": 4,
-    "dp": "a2",
-    "kws": [
-      "valley",
-      "route leak",
-      "provider",
-      "customer"
-    ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 2
-  },
-  {
-    "gid": 5,
-    "dp": "a2",
-    "kws": [
-      "valley",
-      "route leak",
-      "provider",
-      "customer"
-    ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 3
+    "rag_source_cites": 8,
+    "rag_rfc_count": 2,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 9,
+    "rag_time": 37.48,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 0,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 9,
+    "norag_time": 59.48
   },
   {
     "gid": 6,
-    "dp": "a2",
-    "kws": [
-      "valley",
-      "route leak",
-      "provider",
-      "customer"
+    "pattern": "a2",
+    "rag_files": [
+      "rfc9234.txt",
+      "2402.16025v1.pdf",
+      "rfc9234.txt"
     ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 2
-  },
-  {
-    "gid": 7,
-    "dp": "a2",
-    "kws": [
-      "valley",
-      "route leak",
-      "provider",
-      "customer"
-    ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 2
+    "rag_source_cites": 12,
+    "rag_rfc_count": 1,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 9,
+    "rag_time": 56.8,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 0,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 9,
+    "norag_time": 68.57
   },
   {
     "gid": 3,
-    "dp": "a1",
-    "kws": [
-      "RPKI",
-      "ROA",
-      "IRR",
-      "origin",
-      "validation"
+    "pattern": "a1",
+    "rag_files": [
+      "rfc8205.txt.pdf",
+      "rfc8893.txt",
+      "rfc6811.txt"
     ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 2,
-    "C3_hit": true,
-    "C3_div": 2
+    "rag_source_cites": 4,
+    "rag_rfc_count": 1,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 5,
+    "rag_time": 46.9,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 0,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 9,
+    "norag_time": 40.03
   },
   {
     "gid": 9,
-    "dp": "a1",
-    "kws": [
-      "RPKI",
-      "ROA",
-      "IRR",
-      "origin",
-      "validation"
+    "pattern": "a1",
+    "rag_files": [
+      "rfc8893.txt",
+      "rfc8893.txt",
+      "rfc8205.txt.pdf"
     ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 3
-  },
-  {
-    "gid": 16,
-    "dp": "a1",
-    "kws": [
-      "RPKI",
-      "ROA",
-      "IRR",
-      "origin",
-      "validation"
-    ],
-    "C0_hit": true,
-    "C0_div": 2,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 3
-  },
-  {
-    "gid": 19,
-    "dp": "a1",
-    "kws": [
-      "RPKI",
-      "ROA",
-      "IRR",
-      "origin",
-      "validation"
-    ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 2,
-    "C3_hit": true,
-    "C3_div": 3
+    "rag_source_cites": 0,
+    "rag_rfc_count": 2,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 7,
+    "rag_time": 61.34,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 1,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 6,
+    "norag_time": 50.37
   },
   {
     "gid": 21,
-    "dp": "a1",
-    "kws": [
-      "RPKI",
-      "ROA",
-      "IRR",
-      "origin",
-      "validation"
+    "pattern": "a1",
+    "rag_files": [
+      "rfc8893.txt",
+      "rfc8205.txt.pdf",
+      "rfc6811.txt"
     ],
-    "C0_hit": true,
-    "C0_div": 2,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 2,
-    "C3_hit": true,
-    "C3_div": 3
-  },
-  {
-    "gid": 25,
-    "dp": "a1",
-    "kws": [
-      "RPKI",
-      "ROA",
-      "IRR",
-      "origin",
-      "validation"
-    ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 2,
-    "C3_hit": true,
-    "C3_div": 3
+    "rag_source_cites": 4,
+    "rag_rfc_count": 3,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 6,
+    "rag_time": 55.6,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 0,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 6,
+    "norag_time": 46.71
   },
   {
     "gid": 14,
-    "dp": "a3",
-    "kws": [
-      "reserved",
-      "AS_PATH",
-      "AS number",
-      "autonomous system"
+    "pattern": "a3",
+    "rag_files": [
+      "2402.16025v1.pdf",
+      "2402.16025v1.pdf",
+      "2402.16025v1.pdf"
     ],
-    "C0_hit": false,
-    "C0_div": 1,
-    "C1_hit": false,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 1
-  },
-  {
-    "gid": 24,
-    "dp": "a3",
-    "kws": [
-      "reserved",
-      "AS_PATH",
-      "AS number",
-      "autonomous system"
-    ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": false,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": false,
-    "C3_div": 1
+    "rag_source_cites": 6,
+    "rag_rfc_count": 0,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 4,
+    "rag_time": 62.18,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 0,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 5,
+    "norag_time": 57.33
   },
   {
     "gid": 35,
-    "dp": "a3",
-    "kws": [
-      "reserved",
-      "AS_PATH",
-      "AS number",
-      "autonomous system"
+    "pattern": "a3",
+    "rag_files": [
+      "2402.16025v1.pdf",
+      "rfc9234.txt",
+      "2402.16025v1.pdf"
     ],
-    "C0_hit": false,
-    "C0_div": 1,
-    "C1_hit": false,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 2
-  },
-  {
-    "gid": 38,
-    "dp": "a3",
-    "kws": [
-      "reserved",
-      "AS_PATH",
-      "AS number",
-      "autonomous system"
-    ],
-    "C0_hit": false,
-    "C0_div": 1,
-    "C1_hit": false,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 1
-  },
-  {
-    "gid": 45,
-    "dp": "a3",
-    "kws": [
-      "reserved",
-      "AS_PATH",
-      "AS number",
-      "autonomous system"
-    ],
-    "C0_hit": false,
-    "C0_div": 1,
-    "C1_hit": false,
-    "C1_div": 1,
-    "C2_hit": false,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 1
+    "rag_source_cites": 7,
+    "rag_rfc_count": 1,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 8,
+    "rag_time": 49.35,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 2,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 12,
+    "norag_time": 46.27
   },
   {
     "gid": 36,
-    "dp": "a4",
-    "kws": [
-      "origin",
-      "autonomous system",
-      "organization"
+    "pattern": "a4",
+    "rag_files": [
+      "2402.16025v1.pdf",
+      "rfc8893.txt",
+      "2402.16025v1.pdf"
     ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": false,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 2
+    "rag_source_cites": 6,
+    "rag_rfc_count": 1,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 3,
+    "rag_time": 47.74,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 0,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 11,
+    "norag_time": 59.08
   },
   {
     "gid": 153,
-    "dp": "a4",
-    "kws": [
-      "origin",
-      "autonomous system",
-      "organization"
+    "pattern": "a4",
+    "rag_files": [
+      "2402.16025v1.pdf",
+      "rfc8893.txt",
+      "2402.16025v1.pdf"
     ],
-    "C0_hit": true,
-    "C0_div": 1,
-    "C1_hit": true,
-    "C1_div": 1,
-    "C2_hit": true,
-    "C2_div": 1,
-    "C3_hit": true,
-    "C3_div": 2
+    "rag_source_cites": 7,
+    "rag_rfc_count": 0,
+    "rag_pattern_hit": true,
+    "rag_verify_steps": 4,
+    "rag_time": 57.58,
+    "norag_source_cites": 0,
+    "norag_rfc_count": 0,
+    "norag_pattern_hit": true,
+    "norag_verify_steps": 14,
+    "norag_time": 63.28
   }
 ]
