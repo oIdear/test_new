@@ -165,8 +165,7 @@ def main():
     store.load_index(str(base / 'faiss_index.bin'), str(base / 'index_data.json'))
     n_data = len(store.data)
 
-    # embedding 缓存（避免重复编码相同文本）
-    c0_cache  = {}
+    # 统一用 bge 计算所有配置的语义多样性，保证跨配置可比
     bge_cache = {}
 
     configs = {label: {} for label in ('C0', 'C1', 'C2', 'C3', 'C4')}
@@ -199,12 +198,8 @@ def main():
             # C4: bge + BM25+向量+RRF+MMR + 语义查询词（完整系统）
             r4 = store.search(sem_q, k=3, hybrid=True)
 
-            configs['C0'][gid] = {
-                'pattern': pattern,
-                'hit': recall_hit(r0, kws),
-                'div': semantic_diversity(r0, old_model, c0_cache),
-            }
-            for label, r in (('C1', r1), ('C2', r2), ('C3', r3), ('C4', r4)):
+            # 所有配置统一用 bge 计算语义多样性，保证可比性
+            for label, r in (('C0', r0), ('C1', r1), ('C2', r2), ('C3', r3), ('C4', r4)):
                 configs[label][gid] = {
                     'pattern': pattern,
                     'hit': recall_hit(r, kws),
@@ -235,7 +230,8 @@ def main():
     lines.append("**日期：** 2026-05-22  ")
     lines.append("**测试集：** 20 条真实告警（a2×7, a1×6, a3×5, a4×2）  ")
     lines.append("**设计原则：** 每步仅改变一个变量，严格单步消融  ")
-    lines.append("**多样性指标：** Top-3 文档间平均两两语义距离（余弦距离，0~1，越大越多样）\n")
+    lines.append("**多样性指标：** Top-3 文档间平均两两语义距离（余弦距离，0~1，越大越多样）  ")
+    lines.append("**多样性计算模型：** 统一使用 bge-base-en-v1.5，保证五组配置的多样性分数在同一语义空间中可比\n")
     lines.append("---\n")
 
     lines.append("## 1. 实验配置\n")
