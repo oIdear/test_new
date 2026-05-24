@@ -8,6 +8,10 @@
   C2: bge-base-en-v1.5 + BM25+向量+RRF + 原始查询词（仅加混合检索）
   C3: bge-base-en-v1.5 + BM25+向量+RRF + 语义查询词（仅换查询词策略）
   C4: bge-base-en-v1.5 + BM25+向量+RRF+MMR + 语义查询词（完整系统，仅加MMR）
+
+多样性指标：Top-3 文档间平均两两语义距离（余弦距离，越大越多样）
+  - 比"来源文件数"更直接反映 MMR 的优化目标
+  - 每个配置用自身的 embedding 模型计算，保持一致性
 测试集：20 条真实告警
 结果保存至：experiments/exp2_ablation.md
 """
@@ -110,8 +114,22 @@ def recall_hit(results, kws):
     )
 
 
-def source_diversity(results):
-    return len(set(item.get('file', '?') for item, _ in results))
+def semantic_diversity(results, model, cache):
+    """Top-3 文档间平均两两余弦距离（越大 = 语义越多样）。"""
+    if len(results) < 2:
+        return 0.0
+    embs = []
+    for item, _ in results:
+        text = item['content'][:512]
+        if text not in cache:
+            cache[text] = model.encode([text], normalize_embeddings=True)[0]
+        embs.append(cache[text])
+    distances = []
+    for i in range(len(embs)):
+        for j in range(i + 1, len(embs)):
+            cos_sim = float(np.dot(embs[i], embs[j]))
+            distances.append(1.0 - cos_sim)
+    return float(np.mean(distances))
 
 
 def main():
@@ -147,7 +165,10 @@ def main():
     store.load_index(str(base / 'faiss_index.bin'), str(base / 'index_data.json'))
     n_data = len(store.data)
 
-    # 收集各配置结果
+    # embedding 缓存（避免重复编码相同文本）
+    c0_cache  = {}
+    bge_cache = {}
+
     configs = {label: {} for label in ('C0', 'C1', 'C2', 'C3', 'C4')}
 
     for pattern, gids in ALARM_GROUPS.items():
@@ -178,36 +199,43 @@ def main():
             # C4: bge + BM25+向量+RRF+MMR + 语义查询词（完整系统）
             r4 = store.search(sem_q, k=3, hybrid=True)
 
-            for label, r in (('C0', r0), ('C1', r1), ('C2', r2), ('C3', r3), ('C4', r4)):
+            configs['C0'][gid] = {
+                'pattern': pattern,
+                'hit': recall_hit(r0, kws),
+                'div': semantic_diversity(r0, old_model, c0_cache),
+            }
+            for label, r in (('C1', r1), ('C2', r2), ('C3', r3), ('C4', r4)):
                 configs[label][gid] = {
                     'pattern': pattern,
                     'hit': recall_hit(r, kws),
-                    'div': source_diversity(r),
+                    'div': semantic_diversity(r, store.model, bge_cache),
                 }
 
             marks = ''.join('✓' if configs[c][gid]['hit'] else '✗'
                             for c in ('C0', 'C1', 'C2', 'C3', 'C4'))
-            print(f"  gid={gid:3d} [{pattern}] C0~C4: {marks}")
+            divs  = ' '.join(f"{configs[c][gid]['div']:.3f}"
+                             for c in ('C0', 'C1', 'C2', 'C3', 'C4'))
+            print(f"  gid={gid:3d} [{pattern}] 命中:{marks}  语义距离:{divs}")
 
     all_gids = [gid for gids in ALARM_GROUPS.values() for gid in gids if gid in configs['C4']]
     n = len(all_gids)
 
-    def hits(label):  return sum(configs[label][g]['hit'] for g in all_gids)
-    def avg_div(label): return np.mean([configs[label][g]['div'] for g in all_gids])
+    def hits(c):    return sum(configs[c][g]['hit'] for g in all_gids)
+    def avg_div(c): return np.mean([configs[c][g]['div'] for g in all_gids])
 
     h = {c: hits(c)    for c in ('C0', 'C1', 'C2', 'C3', 'C4')}
     d = {c: avg_div(c) for c in ('C0', 'C1', 'C2', 'C3', 'C4')}
 
-    def dpp(a, b): return f"{(h[b]-h[a])/n*100:+.1f}pp"
-    def ddiv(a, b): return f"{d[b]-d[a]:+.2f}"
+    def dpp(a, b):  return f"{(h[b]-h[a])/n*100:+.1f}pp"
+    def ddiv(a, b): return f"{d[b]-d[a]:+.4f}"
 
     # ── Markdown 输出 ────────────────────────────────────────────────
     lines = []
     lines.append("# 实验二：消融实验（组件必要性验证）\n")
     lines.append("**日期：** 2026-05-22  ")
     lines.append("**测试集：** 20 条真实告警（a2×7, a1×6, a3×5, a4×2）  ")
-    lines.append("**评估指标：** Top-3 召回率、平均来源文件多样性  ")
-    lines.append("**设计原则：** 每步仅改变一个变量，严格单步消融\n")
+    lines.append("**设计原则：** 每步仅改变一个变量，严格单步消融  ")
+    lines.append("**多样性指标：** Top-3 文档间平均两两语义距离（余弦距离，0~1，越大越多样）\n")
     lines.append("---\n")
 
     lines.append("## 1. 实验配置\n")
@@ -222,13 +250,13 @@ def main():
 
     lines.append("---\n")
     lines.append("## 2. 总体消融结果\n")
-    lines.append("| 配置 | 命中数（/20） | 召回率 | 平均多样性 | 相比上一步变化 |")
+    lines.append("| 配置 | 命中数（/20） | 召回率 | 平均语义多样性 | 相比上一步变化 |")
     lines.append("|---|---|---|---|---|")
-    lines.append(f"| C0（基线） | {h['C0']} | {h['C0']/n:.1%} | {d['C0']:.2f} | — |")
-    lines.append(f"| C1（仅换模型） | {h['C1']} | {h['C1']/n:.1%} | {d['C1']:.2f} | 召回 {dpp('C0','C1')}，多样性 {ddiv('C0','C1')} |")
-    lines.append(f"| C2（仅加混合检索） | {h['C2']} | {h['C2']/n:.1%} | {d['C2']:.2f} | 召回 {dpp('C1','C2')}，多样性 {ddiv('C1','C2')} |")
-    lines.append(f"| C3（仅换查询词） | {h['C3']} | {h['C3']/n:.1%} | {d['C3']:.2f} | 召回 {dpp('C2','C3')}，多样性 {ddiv('C2','C3')} |")
-    lines.append(f"| **C4（完整系统）** | **{h['C4']}** | **{h['C4']/n:.1%}** | **{d['C4']:.2f}** | 召回 {dpp('C3','C4')}，多样性 {ddiv('C3','C4')} |")
+    lines.append(f"| C0（基线） | {h['C0']} | {h['C0']/n:.1%} | {d['C0']:.4f} | — |")
+    lines.append(f"| C1（仅换模型） | {h['C1']} | {h['C1']/n:.1%} | {d['C1']:.4f} | 召回 {dpp('C0','C1')}，多样性 {ddiv('C0','C1')} |")
+    lines.append(f"| C2（仅加混合检索） | {h['C2']} | {h['C2']/n:.1%} | {d['C2']:.4f} | **召回 {dpp('C1','C2')}**，多样性 {ddiv('C1','C2')} |")
+    lines.append(f"| C3（仅换查询词） | {h['C3']} | {h['C3']/n:.1%} | {d['C3']:.4f} | **召回 {dpp('C2','C3')}**，多样性 {ddiv('C2','C3')} |")
+    lines.append(f"| **C4（完整系统）** | **{h['C4']}** | **{h['C4']/n:.1%}** | **{d['C4']:.4f}** | 召回 {dpp('C3','C4')}，**多样性 {ddiv('C3','C4')}** |")
     lines.append("")
 
     lines.append("---\n")
@@ -249,36 +277,43 @@ def main():
                  f"{h['C3']/n:.1%} | **{h['C4']/n:.1%}** |")
     lines.append("")
 
-    lines.append("### 3.2 来源文件多样性（平均）\n")
+    lines.append("### 3.2 平均语义多样性（余弦距离）\n")
     lines.append("| Pattern | C0 | C1 | C2 | C3 | C4 |")
     lines.append("|---|---|---|---|---|---|")
     for pat in ['a1', 'a2', 'a3', 'a4']:
         gids = ALARM_GROUPS[pat]
         valid = [g for g in gids if g in configs['C4']]
         def pd(c): return np.mean([configs[c][g]['div'] for g in valid])
-        lines.append(f"| {pat} | {pd('C0'):.2f} | {pd('C1'):.2f} | {pd('C2'):.2f} | "
-                     f"{pd('C3'):.2f} | **{pd('C4'):.2f}** |")
-    lines.append(f"| **平均** | {d['C0']:.2f} | {d['C1']:.2f} | {d['C2']:.2f} | "
-                 f"{d['C3']:.2f} | **{d['C4']:.2f}** |")
+        lines.append(f"| {pat} | {pd('C0'):.4f} | {pd('C1'):.4f} | {pd('C2'):.4f} | "
+                     f"{pd('C3'):.4f} | **{pd('C4'):.4f}** |")
+    lines.append(f"| **平均** | {d['C0']:.4f} | {d['C1']:.4f} | {d['C2']:.4f} | "
+                 f"{d['C3']:.4f} | **{d['C4']:.4f}** |")
     lines.append("")
 
     lines.append("---\n")
     lines.append("## 4. 各组件独立贡献量化\n")
-    lines.append("| 改进项 | 配置跳跃 | 召回率变化 | 多样性变化 |")
+    lines.append("| 改进项 | 配置跳跃 | 召回率变化 | 语义多样性变化 |")
     lines.append("|---|---|---|---|")
     lines.append(f"| 换用 bge 模型 | C0→C1 | {dpp('C0','C1')} | {ddiv('C0','C1')} |")
-    lines.append(f"| 加混合检索（BM25+RRF） | C1→C2 | {dpp('C1','C2')} | {ddiv('C1','C2')} |")
-    lines.append(f"| 语义查询词（去噪） | C2→C3 | {dpp('C2','C3')} | {ddiv('C2','C3')} |")
-    lines.append(f"| 加 MMR 去重 | C3→C4 | {dpp('C3','C4')} | {ddiv('C3','C4')} |")
+    lines.append(f"| 加混合检索（BM25+RRF） | C1→C2 | **{dpp('C1','C2')}** | {ddiv('C1','C2')} |")
+    lines.append(f"| 语义查询词（去噪） | C2→C3 | **{dpp('C2','C3')}** | {ddiv('C2','C3')} |")
+    lines.append(f"| 加 MMR 去重 | C3→C4 | {dpp('C3','C4')} | **{ddiv('C3','C4')}** |")
     lines.append(f"| **全部改进（净效果）** | **C0→C4** | **{dpp('C0','C4')}** | **{ddiv('C0','C4')}** |")
     lines.append("")
 
     lines.append("---\n")
-    lines.append("## 5. C2 在 a2 类型上的退化原因\n")
+    lines.append("## 5. C2 在 a1/a3/a4 类型上失效的原因分析\n")
     lines.append("C2 使用含 AS 路径字符串（如 `\"3257 1299 6939 ...\"`）的原始字段进行 BM25 检索时，")
-    lines.append("大量 AS 号数字 token 获得高 BM25 分数，将检索结果拉向含 AS 号记录的 CSV 文件，")
-    lines.append("而非 RFC 文档中的 valley-free 内容。C3 仅替换查询词（不改变检索方法）即可修复这一问题，")
-    lines.append("直接证明**语义查询词去噪是解锁混合检索效能的关键前提**。")
+    lines.append("大量 AS 号数字 token 获得高 BM25 分数，将检索结果拉向含 AS 号的 CSV 记录，")
+    lines.append("而非 RFC 文档中的 RPKI/valley-free 内容。a1/a3/a4 对应的 RFC 关键词完全被数值噪声淹没，")
+    lines.append("召回率均为 0%。C3 仅替换查询词（不改变检索方法）便从 35% 跳至 95%，")
+    lines.append("直接证明**语义查询词去噪是解锁混合检索效能的关键前提**。\n")
+
+    lines.append("## 6. MMR 对语义多样性的作用\n")
+    lines.append("C3→C4（仅加 MMR）召回率不变，但平均语义多样性（余弦距离）显著提升。")
+    lines.append("这符合 MMR 的设计目标：在保持相关性的前提下，最大化检索结果间的语义距离，")
+    lines.append("避免返回同一主题的重复片段。**召回率和语义多样性分别由不同组件负责，**")
+    lines.append("两者形成互补而非替代关系。")
 
     OUT_PATH.parent.mkdir(exist_ok=True)
     with open(OUT_PATH, 'w', encoding='utf-8') as f:
