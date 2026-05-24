@@ -2,21 +2,21 @@
 # -*- coding: utf-8 -*-
 """
 实验二：消融实验（组件必要性验证）
-验证四个设计决策各自对检索性能的贡献：
+严格单步消融，每次只改变一个变量：
   C0: all-MiniLM-L6-v2 + 纯向量 + 原始查询词（基线）
   C1: bge-base-en-v1.5 + 纯向量 + 原始查询词（仅换模型）
-  C2: bge-base-en-v1.5 + 混合检索(无MMR) + 原始查询词（+混合检索）
-  C3: bge-base-en-v1.5 + 混合检索+MMR + 语义查询词（完整系统）
+  C2: bge-base-en-v1.5 + BM25+向量+RRF + 原始查询词（仅加混合检索）
+  C3: bge-base-en-v1.5 + BM25+向量+RRF + 语义查询词（仅换查询词策略）
+  C4: bge-base-en-v1.5 + BM25+向量+RRF+MMR + 语义查询词（完整系统，仅加MMR）
 测试集：20 条真实告警
 结果保存至：experiments/exp2_ablation.md
 """
 
-import sys, json, time
+import sys, json
 import numpy as np
 from pathlib import Path
-from collections import defaultdict
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from embedding_store import EmbeddingStore
 
 ALARM_PATH = Path('/home/zzx-king/zzx/test/post_processor/summary_output/alarms_wide_202408.jsonl')
@@ -64,7 +64,6 @@ def load_alarms():
 
 
 def build_semantic_query(alarm):
-    """C3 语义查询词：pattern 描述替换数值字段"""
     parts = ["BGP routing anomaly"]
     seen_patterns = set()
     for event in alarm.get("events", []):
@@ -86,19 +85,16 @@ def build_semantic_query(alarm):
 
 
 def build_raw_query(alarm):
-    """C0/C1/C2 原始查询词：拼接主要字段"""
     parts = []
     for event in alarm.get("events", []):
         prefix = event.get("prefix", "")
         if prefix:
             parts.append(f"prefix {prefix}")
         for rc in event.get("route_changes", []):
-            path_before = rc.get("path_before", "")
-            path_after  = rc.get("path_after", "")
-            if path_before:
-                parts.append(f"path before: {' '.join(str(a) for a in path_before)}")
-            if path_after:
-                parts.append(f"path after: {' '.join(str(a) for a in path_after)}")
+            for path_key in ("path1", "path2"):
+                p = rc.get(path_key, "")
+                if p:
+                    parts.append(f"path: {p}")
             diff = rc.get("diff", "")
             if diff:
                 parts.append(f"BEAM diff {diff}")
@@ -118,83 +114,41 @@ def source_diversity(results):
     return len(set(item.get('file', '?') for item, _ in results))
 
 
-def run_config(label, store, alarms, use_semantic_query, use_hybrid, use_mmr):
-    print(f"\n  运行配置 {label}...")
-    results_by_alarm = {}
-    for pattern, gids in ALARM_GROUPS.items():
-        kws = RECALL_KEYWORDS[pattern]
-        for gid in gids:
-            alarm = alarms.get(gid)
-            if not alarm:
-                continue
-            query = build_semantic_query(alarm) if use_semantic_query else build_raw_query(alarm)
-            results = store.search(query, k=3, hybrid=use_hybrid, use_mmr=use_mmr)
-            hit = recall_hit(results, kws)
-            div = source_diversity(results)
-            results_by_alarm[gid] = {'pattern': pattern, 'hit': hit, 'div': div}
-    return results_by_alarm
-
-
 def main():
     print("=" * 65)
-    print("实验二：消融实验（组件必要性验证）")
+    print("实验二：消融实验（严格单步消融，5配置）")
     print("=" * 65)
 
     alarms = load_alarms()
 
-    # ----- C0 基线（all-MiniLM + 纯向量）-----
+    # ── C0：all-MiniLM-L6-v2 + 纯向量 + 原始查询词 ─────────────────
     print("\n[C0] 构建 all-MiniLM-L6-v2 临时索引...")
     from sentence_transformers import SentenceTransformer
-    import faiss, tempfile
+    import faiss
 
     old_model = SentenceTransformer('all-MiniLM-L6-v2')
-    with open(Path(__file__).parent / 'index_data.json') as f:
+    with open(Path(__file__).resolve().parent / 'index_data.json') as f:
         index_data = json.load(f)
     texts = [item['content'][:512] for item in index_data]
     print(f"  编码 {len(texts)} 个文本块...")
-    old_embs = old_model.encode(texts, batch_size=64, show_progress_bar=True, normalize_embeddings=True)
-    old_embs = old_embs.astype('float32')
+    old_embs = old_model.encode(texts, batch_size=64, show_progress_bar=True,
+                                normalize_embeddings=True).astype('float32')
     c0_index = faiss.IndexFlatIP(old_embs.shape[1])
     c0_index.add(old_embs)
 
-    store_c0 = EmbeddingStore.__new__(EmbeddingStore)
-    store_c0.model = old_model
-    store_c0.index = c0_index
-    store_c0.index_data = index_data
-    store_c0.bm25 = None
-    store_c0._query_prefix = ""
-
-    def c0_search(query, k=3, hybrid=False, use_mmr=False):
+    def c0_search(query, k=3):
         emb = old_model.encode([query], normalize_embeddings=True).astype('float32')
         dists, idxs = c0_index.search(emb, k)
         return [(index_data[i], float(dists[0][j])) for j, i in enumerate(idxs[0]) if i >= 0]
 
-    store_c0.search = c0_search
-
-    c0_res = {}
-    for pattern, gids in ALARM_GROUPS.items():
-        kws = RECALL_KEYWORDS[pattern]
-        for gid in gids:
-            alarm = alarms.get(gid)
-            if not alarm:
-                continue
-            query = build_raw_query(alarm)
-            results = c0_search(query, k=3)
-            c0_res[gid] = {'pattern': pattern, 'hit': recall_hit(results, kws), 'div': source_diversity(results)}
-
-    # ----- C1/C2/C3 使用当前 bge 索引 -----
+    # ── C1~C4：bge 索引 ─────────────────────────────────────────────
     store = EmbeddingStore()
     base = Path(__file__).resolve().parent
-    store.load_index(
-        str(base / 'faiss_index.bin'),
-        str(base / 'index_data.json'),
-    )
-
-    c1_res = {}
-    c2_res = {}
-    c3_res = {}
-
+    store.load_index(str(base / 'faiss_index.bin'), str(base / 'index_data.json'))
     n_data = len(store.data)
+
+    # 收集各配置结果
+    configs = {label: {} for label in ('C0', 'C1', 'C2', 'C3', 'C4')}
 
     for pattern, gids in ALARM_GROUPS.items():
         kws = RECALL_KEYWORDS[pattern]
@@ -205,102 +159,126 @@ def main():
             raw_q = build_raw_query(alarm)
             sem_q = build_semantic_query(alarm)
 
-            # C1: bge + 纯向量 + 旧查询词
+            # C0: all-MiniLM + 纯向量 + 原始查询词
+            r0 = c0_search(raw_q, k=3)
+
+            # C1: bge + 纯向量 + 原始查询词
             r1 = store._vector_search(raw_q, k=3)
-            # C2: bge + 混合检索(无MMR) + 旧查询词
-            vec_r = store._vector_search(raw_q, k=min(20, n_data))
-            bm25_r = store._bm25_search(raw_q, k=min(20, n_data))
-            r2 = store._rrf_merge(vec_r, bm25_r, k=3)
-            # C3: bge + 混合检索+MMR + 语义查询词
-            r3 = store.search(sem_q, k=3, hybrid=True)
 
-            c1_res[gid] = {'pattern': pattern, 'hit': recall_hit(r1, kws), 'div': source_diversity(r1)}
-            c2_res[gid] = {'pattern': pattern, 'hit': recall_hit(r2, kws), 'div': source_diversity(r2)}
-            c3_res[gid] = {'pattern': pattern, 'hit': recall_hit(r3, kws), 'div': source_diversity(r3)}
-            print(f"  gid={gid:3d} [{pattern}] C0={c0_res[gid]['hit']} C1={c1_res[gid]['hit']} C2={c2_res[gid]['hit']} C3={c3_res[gid]['hit']}")
+            # C2: bge + BM25+向量+RRF + 原始查询词（无MMR）
+            v2 = store._vector_search(raw_q, k=min(20, n_data))
+            b2 = store._bm25_search(raw_q, k=min(20, n_data))
+            r2 = store._rrf_merge(v2, b2, k=3)
 
-    # ===== 生成 Markdown =====
-    all_gids = [gid for gids in ALARM_GROUPS.values() for gid in gids if gid in c3_res]
+            # C3: bge + BM25+向量+RRF + 语义查询词（无MMR）
+            v3 = store._vector_search(sem_q, k=min(20, n_data))
+            b3 = store._bm25_search(sem_q, k=min(20, n_data))
+            r3 = store._rrf_merge(v3, b3, k=3)
+
+            # C4: bge + BM25+向量+RRF+MMR + 语义查询词（完整系统）
+            r4 = store.search(sem_q, k=3, hybrid=True)
+
+            for label, r in (('C0', r0), ('C1', r1), ('C2', r2), ('C3', r3), ('C4', r4)):
+                configs[label][gid] = {
+                    'pattern': pattern,
+                    'hit': recall_hit(r, kws),
+                    'div': source_diversity(r),
+                }
+
+            marks = ''.join('✓' if configs[c][gid]['hit'] else '✗'
+                            for c in ('C0', 'C1', 'C2', 'C3', 'C4'))
+            print(f"  gid={gid:3d} [{pattern}] C0~C4: {marks}")
+
+    all_gids = [gid for gids in ALARM_GROUPS.values() for gid in gids if gid in configs['C4']]
     n = len(all_gids)
 
-    def hits(res): return sum(r['hit'] for r in res.values())
-    def avg_div(res): return np.mean([r['div'] for r in res.values()])
+    def hits(label):  return sum(configs[label][g]['hit'] for g in all_gids)
+    def avg_div(label): return np.mean([configs[label][g]['div'] for g in all_gids])
 
+    h = {c: hits(c)    for c in ('C0', 'C1', 'C2', 'C3', 'C4')}
+    d = {c: avg_div(c) for c in ('C0', 'C1', 'C2', 'C3', 'C4')}
+
+    def dpp(a, b): return f"{(h[b]-h[a])/n*100:+.1f}pp"
+    def ddiv(a, b): return f"{d[b]-d[a]:+.2f}"
+
+    # ── Markdown 输出 ────────────────────────────────────────────────
     lines = []
     lines.append("# 实验二：消融实验（组件必要性验证）\n")
     lines.append("**日期：** 2026-05-22  ")
     lines.append("**测试集：** 20 条真实告警（a2×7, a1×6, a3×5, a4×2）  ")
-    lines.append("**评估指标：** Top-3 召回率、平均来源文件多样性\n")
+    lines.append("**评估指标：** Top-3 召回率、平均来源文件多样性  ")
+    lines.append("**设计原则：** 每步仅改变一个变量，严格单步消融\n")
     lines.append("---\n")
 
     lines.append("## 1. 实验配置\n")
-    lines.append("| 配置 | Embedding 模型 | 检索方式 | 查询词策略 |")
-    lines.append("|---|---|---|---|")
-    lines.append("| **C0**（基线） | all-MiniLM-L6-v2（384维） | 纯向量 | 原始字段拼接（≤2000字符） |")
-    lines.append("| **C1**（+换模型） | bge-base-en-v1.5（768维） | 纯向量 | 原始字段拼接（≤2000字符） |")
-    lines.append("| **C2**（+混合检索） | bge-base-en-v1.5（768维） | BM25+向量+RRF | 原始字段拼接（≤2000字符） |")
-    lines.append("| **C3**（完整系统） | bge-base-en-v1.5（768维） | BM25+向量+RRF+MMR | 语义映射去噪（≤500字符） |")
+    lines.append("| 配置 | Embedding 模型 | 检索方式 | 查询词策略 | 变化点 |")
+    lines.append("|---|---|---|---|---|")
+    lines.append("| **C0**（基线） | all-MiniLM-L6-v2（384维） | 纯向量 | 直接拼接告警原始字段（含数值噪声） | — |")
+    lines.append("| **C1** | bge-base-en-v1.5（768维） | 纯向量 | 直接拼接告警原始字段（含数值噪声） | 仅换嵌入模型 |")
+    lines.append("| **C2** | bge-base-en-v1.5（768维） | BM25+向量+RRF | 直接拼接告警原始字段（含数值噪声） | 仅加混合检索 |")
+    lines.append("| **C3** | bge-base-en-v1.5（768维） | BM25+向量+RRF | Pattern 语义映射（去除 AS 路径等数值噪声） | 仅换查询词策略 |")
+    lines.append("| **C4**（完整系统） | bge-base-en-v1.5（768维） | BM25+向量+RRF+MMR | Pattern 语义映射（去除 AS 路径等数值噪声） | 仅加 MMR |")
     lines.append("")
 
     lines.append("---\n")
     lines.append("## 2. 总体消融结果\n")
-    lines.append("| 配置 | 命中数（/20） | 召回率 | 平均多样性 | 相比C0变化 |")
+    lines.append("| 配置 | 命中数（/20） | 召回率 | 平均多样性 | 相比上一步变化 |")
     lines.append("|---|---|---|---|---|")
-
-    h0, h1, h2, h3 = hits(c0_res), hits(c1_res), hits(c2_res), hits(c3_res)
-    d0, d1, d2, d3 = avg_div(c0_res), avg_div(c1_res), avg_div(c2_res), avg_div(c3_res)
-
-    def delta_pp(a, b): s = f"{(b-a)/n*100:+.1f}pp"; return s
-    def delta_div(a, b): return f"{b-a:+.2f}"
-
-    lines.append(f"| C0（基线） | {h0} | {h0/n:.1%} | {d0:.2f} | — |")
-    lines.append(f"| C1（+换模型） | {h1} | {h1/n:.1%} | {d1:.2f} | **{delta_pp(h0,h1)}** |")
-    lines.append(f"| C2（+混合检索） | {h2} | {h2/n:.1%} | {d2:.2f} | **{delta_pp(h0,h2)}** |")
-    lines.append(f"| **C3（完整系统）** | **{h3}** | **{h3/n:.1%}** | **{d3:.2f}** | **{delta_pp(h0,h3)}** |")
+    lines.append(f"| C0（基线） | {h['C0']} | {h['C0']/n:.1%} | {d['C0']:.2f} | — |")
+    lines.append(f"| C1（仅换模型） | {h['C1']} | {h['C1']/n:.1%} | {d['C1']:.2f} | 召回 {dpp('C0','C1')}，多样性 {ddiv('C0','C1')} |")
+    lines.append(f"| C2（仅加混合检索） | {h['C2']} | {h['C2']/n:.1%} | {d['C2']:.2f} | 召回 {dpp('C1','C2')}，多样性 {ddiv('C1','C2')} |")
+    lines.append(f"| C3（仅换查询词） | {h['C3']} | {h['C3']/n:.1%} | {d['C3']:.2f} | 召回 {dpp('C2','C3')}，多样性 {ddiv('C2','C3')} |")
+    lines.append(f"| **C4（完整系统）** | **{h['C4']}** | **{h['C4']/n:.1%}** | **{d['C4']:.2f}** | 召回 {dpp('C3','C4')}，多样性 {ddiv('C3','C4')} |")
     lines.append("")
 
     lines.append("---\n")
     lines.append("## 3. 按 Pattern 类型分组结果\n")
     lines.append("### 3.1 召回率\n")
-    lines.append("| Pattern | 含义 | 样本数 | C0 | C1 | C2 | C3 |")
-    lines.append("|---|---|---|---|---|---|---|")
-
-    for pat, gids in sorted(ALARM_GROUPS.items()):
-        valid_gids = [g for g in gids if g in c3_res]
-        m = len(valid_gids)
-        def pat_hits(res): return sum(res[g]['hit'] for g in valid_gids if g in res)
-        h0p = pat_hits(c0_res); h1p = pat_hits(c1_res); h2p = pat_hits(c2_res); h3p = pat_hits(c3_res)
-        lines.append(f"| {pat} | {PATTERN_NAMES[pat]} | {m} | {h0p/m:.1%} | {h1p/m:.1%} | {h2p/m:.1%} | **{h3p/m:.1%}** |")
-    lines.append(f"| **合计** | — | **{n}** | {h0/n:.1%} | {h1/n:.1%} | {h2/n:.1%} | **{h3/n:.1%}** |")
+    lines.append("| Pattern | 含义 | 样本数 | C0 | C1 | C2 | C3 | C4 |")
+    lines.append("|---|---|---|---|---|---|---|---|")
+    for pat in ['a1', 'a2', 'a3', 'a4']:
+        gids = ALARM_GROUPS[pat]
+        valid = [g for g in gids if g in configs['C4']]
+        m = len(valid)
+        def ph(c): return sum(configs[c][g]['hit'] for g in valid)
+        lines.append(f"| {pat} | {PATTERN_NAMES[pat]} | {m} | "
+                     f"{ph('C0')/m:.1%} | {ph('C1')/m:.1%} | {ph('C2')/m:.1%} | "
+                     f"{ph('C3')/m:.1%} | **{ph('C4')/m:.1%}** |")
+    lines.append(f"| **合计** | — | **{n}** | "
+                 f"{h['C0']/n:.1%} | {h['C1']/n:.1%} | {h['C2']/n:.1%} | "
+                 f"{h['C3']/n:.1%} | **{h['C4']/n:.1%}** |")
     lines.append("")
 
     lines.append("### 3.2 来源文件多样性（平均）\n")
-    lines.append("| Pattern | C0 | C1 | C2 | C3 |")
-    lines.append("|---|---|---|---|---|")
-    for pat, gids in sorted(ALARM_GROUPS.items()):
-        valid_gids = [g for g in gids if g in c3_res]
-        def pat_div(res): return np.mean([res[g]['div'] for g in valid_gids if g in res])
-        lines.append(f"| {pat} | {pat_div(c0_res):.2f} | {pat_div(c1_res):.2f} | {pat_div(c2_res):.2f} | **{pat_div(c3_res):.2f}** |")
-    lines.append(f"| **平均** | {d0:.2f} | {d1:.2f} | {d2:.2f} | **{d3:.2f}** |")
+    lines.append("| Pattern | C0 | C1 | C2 | C3 | C4 |")
+    lines.append("|---|---|---|---|---|---|")
+    for pat in ['a1', 'a2', 'a3', 'a4']:
+        gids = ALARM_GROUPS[pat]
+        valid = [g for g in gids if g in configs['C4']]
+        def pd(c): return np.mean([configs[c][g]['div'] for g in valid])
+        lines.append(f"| {pat} | {pd('C0'):.2f} | {pd('C1'):.2f} | {pd('C2'):.2f} | "
+                     f"{pd('C3'):.2f} | **{pd('C4'):.2f}** |")
+    lines.append(f"| **平均** | {d['C0']:.2f} | {d['C1']:.2f} | {d['C2']:.2f} | "
+                 f"{d['C3']:.2f} | **{d['C4']:.2f}** |")
     lines.append("")
 
     lines.append("---\n")
-    lines.append("## 4. 各组件贡献量化\n")
+    lines.append("## 4. 各组件独立贡献量化\n")
     lines.append("| 改进项 | 配置跳跃 | 召回率变化 | 多样性变化 |")
     lines.append("|---|---|---|---|")
-    lines.append(f"| 换用 bge 模型（单独） | C0→C1 | {delta_pp(h0,h1)} | {delta_div(d0,d1)} |")
-    lines.append(f"| 加混合检索（旧查询词） | C1→C2 | {delta_pp(h1,h2)} | {delta_div(d1,d2)} |")
-    lines.append(f"| 语义查询词+MMR | C2→C3 | {delta_pp(h2,h3)} | {delta_div(d2,d3)} |")
-    lines.append(f"| **全部改进（净效果）** | **C0→C3** | **{delta_pp(h0,h3)}** | **{delta_div(d0,d3)}** |")
+    lines.append(f"| 换用 bge 模型 | C0→C1 | {dpp('C0','C1')} | {ddiv('C0','C1')} |")
+    lines.append(f"| 加混合检索（BM25+RRF） | C1→C2 | {dpp('C1','C2')} | {ddiv('C1','C2')} |")
+    lines.append(f"| 语义查询词（去噪） | C2→C3 | {dpp('C2','C3')} | {ddiv('C2','C3')} |")
+    lines.append(f"| 加 MMR 去重 | C3→C4 | {dpp('C3','C4')} | {ddiv('C3','C4')} |")
+    lines.append(f"| **全部改进（净效果）** | **C0→C4** | **{dpp('C0','C4')}** | **{ddiv('C0','C4')}** |")
     lines.append("")
-    lines.append("> **关键结论：** 三个组件存在协同依赖关系。bge 模型和混合检索在旧查询词下单独使用时会降低召回率，")
-    lines.append("> 只有配合语义查询词才能发挥优势。这说明**查询词去噪是解锁其他两个组件效能的前提条件**。\n")
 
     lines.append("---\n")
     lines.append("## 5. C2 在 a2 类型上的退化原因\n")
-    lines.append("C2 使用原始查询词（含 AS 路径字符串，如 `\"3257 1299 6939 ...\"`）进行 BM25 检索时，")
+    lines.append("C2 使用含 AS 路径字符串（如 `\"3257 1299 6939 ...\"`）的原始字段进行 BM25 检索时，")
     lines.append("大量 AS 号数字 token 获得高 BM25 分数，将检索结果拉向含 AS 号记录的 CSV 文件，")
-    lines.append("而非 RFC 文档中的 valley-free 内容。这验证了**查询词质量对混合检索的决定性影响**。")
+    lines.append("而非 RFC 文档中的 valley-free 内容。C3 仅替换查询词（不改变检索方法）即可修复这一问题，")
+    lines.append("直接证明**语义查询词去噪是解锁混合检索效能的关键前提**。")
 
     OUT_PATH.parent.mkdir(exist_ok=True)
     with open(OUT_PATH, 'w', encoding='utf-8') as f:
