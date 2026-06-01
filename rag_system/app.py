@@ -27,7 +27,7 @@ store.load_index(str(INDEX_PATH), str(DATA_PATH))
 print("✅ RAG向量索引加载完成")
 
 # 配置
-DEEPSEEK_API_KEY = "sk-18be0971348e40b6b5ff9ffcfe19a63e"
+DEEPSEEK_API_KEY = "sk-.................."
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 
 #Flask 端读取 jsonl
